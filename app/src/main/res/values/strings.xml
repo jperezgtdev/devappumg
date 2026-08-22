@@ -1,0 +1,16 @@
+<resources>
+    <string name="app_name">DEVAPPUMG</string>
+    <string name="login_subtitle">APRENDIENDO A DESARROLLAR SOFTWARE</string>
+    <string name="login_title">Iniciar Sesión</string>
+    <string name="login_description">Ingresa tus credenciales para continuar</string>
+    <string name="username_label">USUARIO</string>
+    <string name="username_hint">correo@empresa.com</string>
+    <string name="password_label">CONTRASEÑA</string>
+    <string name="password_hint">••••••••</string>
+    <string name="remember_me">Recuérdame</string>
+    <string name="forgot_password">¿Olvidaste tu contraseña?</string>
+    <string name="login_button">Ingresar</string>
+    <string name="show_password">Mostrar contraseña</string>
+    <string name="version">Versión 1.0.0</string>
+    <string name="copyright">© 2026 DevAppUMG Todos los derechos reservados.</string>
+</resources>

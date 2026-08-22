@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+
+    <color name="blue_primary">#1976D2</color>
+    <color name="blue_dark">#003B82</color>
+    <color name="blue_header">#1565C0</color>
+    <color name="blue_light_text">#9DD6FF</color>
+    <color name="input_background">#F3F8FD</color>
+    <color name="input_border">#9CCBFF</color>
+    <color name="text_primary">#263238</color>
+    <color name="text_secondary">#78909C</color>
+    <color name="text_hint">#90A4AE</color>
+    <color name="button_disabled">#90A4AE</color>
+</resources>
