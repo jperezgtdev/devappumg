@@ -107,11 +107,10 @@ public class UpdateManager {
 
         new AlertDialog.Builder(context)
                 .setTitle("Nueva versión disponible")
-                .setMessage("Versión actual: " + currentVersionName + " (" + currentCode + ")\n" +
-                        "Nueva versión: " + newVersionName + " (" + newCode + ")\n\n" +
+                .setMessage("Versión actual: " + currentVersionName + "\n" +
+                        "Nueva versión: " + newVersionName + "\n\n" +
                         "Hay una nueva versión disponible de la aplicación.")
                 .setPositiveButton("Actualizar", (dialog, which) -> downloadAndInstallApk(apkUrl))
-                .setNegativeButton("Luego", null)
                 .setCancelable(false)
                 .show();
     }

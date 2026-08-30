@@ -1,183 +1,121 @@
-# Guía Definitiva: Login Profesional, Persistencia y API REST en Android
+# Guía Definitiva: Aplicación Android con Login, Retrofit y Actualización Automática
 
-Esta guía proporciona un paso a paso detallado para construir una aplicación Android robusta utilizando **Java** y **XML**. Aprenderás diseño de interfaces (UI), experiencia de usuario (UX), persistencia local y consumo de servicios externos.
+Esta guía detalla el proceso paso a paso para construir una aplicación profesional en **Java** y **XML**. Cubre desde el diseño visual hasta la integración con microservicios y sistemas de actualización obligatoria desde la nube.
 
 ---
 
-## 1. Arquitectura y Configuración
+## 1. Configuración de Arquitectura (Gradle)
 
-### 1.1 Dependencias Críticas (Gradle)
-Asegúrate de incluir las librerías para comunicación de red en `gradle/libs.versions.toml`:
+### 1.1 Dependencias y Versiones
+Configura tu proyecto para soportar comunicación de red y Firebase en `gradle/libs.versions.toml`:
 ```toml
 [versions]
 retrofit = "2.9.0"
 okhttp = "4.9.3"
+firebaseFirestore = "26.6.0"
 
 [libraries]
 retrofit = { group = "com.squareup.retrofit2", name = "retrofit", version.ref = "retrofit" }
 converter-gson = { group = "com.squareup.retrofit2", name = "converter-gson", version.ref = "retrofit" }
-okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
-logging-interceptor = { group = "com.squareup.okhttp3", name = "logging-interceptor", version.ref = "okhttp" }
+firebase-firestore = { group = "com.google.firebase", name = "firebase-firestore", version.ref = "firebaseFirestore" }
 ```
 
 ### 1.2 Control de Versión Dinámico
-En tu `app/build.gradle`, puedes hacer que la versión de la app se inyecte automáticamente en el XML:
-
+Define la versión de tu app en `app/build.gradle`. Esto permite que el XML lea automáticamente la versión configurada:
 ```gradle
 android {
     defaultConfig {
+        versionCode 1
         versionName "1.0.0"
-        // Crea un recurso de string accesible como @string/app_version
+        // Inyecta el String en los recursos XML
         resValue "string", "app_version", "\"Versión ${versionName}\""
     }
     buildFeatures {
-        resValues true // Obligatorio en versiones modernas de AGP
+        resValues true // Necesario para habilitar resValue
     }
 }
 ```
 
-### 1.3 Permisos y Seguridad (Manifest)
-No olvides el permiso de Internet y configurar la **SplashActivity** como la actividad de inicio (`LAUNCHER`):
+---
 
-```xml
-<application ...>
-    <activity android:name=".activities.SplashActivity" android:exported="true">
-        <intent-filter>
-            <action android:name="android.intent.action.MAIN" />
-            <category android:name="android.intent.category.LAUNCHER" />
-        </intent-filter>
-    </activity>
-    ...
-</application>
+## 2. Flujo de Navegación y UX
+
+### 2.1 Pantalla de Bienvenida (SplashActivity)
+El Splash es la puerta de entrada. Su función es:
+1. Mostrar la marca.
+2. **Verificar actualizaciones** en segundo plano.
+3. Decidir si enviar al usuario al Login o a la Pantalla Principal (Auto-login).
+
+### 2.2 Patrones de Experiencia de Usuario (UX)
+- **ProgressBar Circular**: Muéstralo siempre antes de iniciar una petición al servidor (`View.VISIBLE`) y ocúltalo al terminar (`View.GONE`).
+- **Bloqueo de Botones**: Desactiva el botón de acción durante la carga para evitar peticiones duplicadas.
+- **Seguridad Visual**: Implementa el "ojo" para mostrar/ocultar contraseñas cambiando el `inputType` y el icono dinámicamente.
+
+---
+
+## 3. Persistencia de Datos (SharedPreferences)
+
+Utilizamos `SharedPreferences` para dos propósitos distintos:
+1. **Recordar Usuario**: Guardar solo el correo/username si el usuario marca la casilla.
+2. **Sesión Activa**: Guardar el Token **JWT** y un flag `is_logged_in`.
+
+```java
+// Ejemplo de guardado de sesión
+SharedPreferences prefs = getSharedPreferences("user_session", MODE_PRIVATE);
+prefs.edit()
+    .putString("auth_token", token)
+    .putBoolean("is_logged_in", true)
+    .apply();
 ```
 
 ---
 
-## 2. Diseño de Interfaces (Layouts y Estilos)
+## 4. Consumo de Microservicios (Retrofit)
 
-### 2.1 Pantalla de Carga (`activity_splash.xml`)
-Implementa un diseño que use el logo de la aplicación centrado y un fondo que combine con el diseño general.
-
-### 2.2 Uso de Drawables Personalizados
-Para lograr un diseño moderno (como ondas y botones redondeados), usamos XML en la carpeta `res/drawable`:
-- **bg_input.xml**: Define bordes redondeados y colores de fondo para los campos.
-- **bg_wave.xml**: Un `vector` que crea la forma de onda en el encabezado.
-- **bg_button.xml**: Define el aspecto del botón (redondeado y con color primario).
-
-### 2.2 Pantalla de Login (`activity_login.xml`)
-Estructura sugerida:
-1.  **ScrollView**: Permite que el contenido se desplace en pantallas pequeñas.
-2.  **ConstraintLayout**: Para posicionar elementos con precisión.
-3.  **Encabezado Azul**: Un `FrameLayout` con fondo personalizado y círculos decorativos.
-4.  **Campos de Texto**: Agrupados en `LinearLayout` para incluir iconos a la izquierda.
-5.  **ProgressBar**: Un elemento circular posicionado en el centro de la pantalla con `android:visibility="gone"`.
-
----
-
-## 3. Lógica de Usuario y UX
-
-### 3.1 Mostrar y Ocultar Contraseña
-Mejora la UX alternando el icono del ojo y el tipo de entrada del teclado:
+### 4.1 Peticiones Protegidas con JWT
+Para consumir endpoints seguros (como los de SGAU), debes incluir el Token en los encabezados:
 ```java
-private void togglePasswordVisibility() {
-    if (isPasswordVisible) {
-        etPassword.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
-        ivPassword.setImageResource(R.drawable.ic_visibility_off);
-    } else {
-        etPassword.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD);
-        ivPassword.setImageResource(R.drawable.ic_visibility);
-    }
-    isPasswordVisible = !isPasswordVisible;
-    etPassword.setSelection(etPassword.getText().length()); // Mantiene el cursor al final
+public interface ApiService {
+    @GET("api/usuarios/{id}")
+    Call<UserResponse> getUserById(
+        @Header("Authorization") String token, // Formato: "Bearer {token}"
+        @Path("id") int id
+    );
 }
 ```
 
-### 3.2 Persistencia con SharedPreferences
-Guardamos datos básicos para "Recordar Usuario" y el Token de sesión:
-```java
-private void saveUserSession(String correo, String nombre, String token) {
-    SharedPreferences preferences = getSharedPreferences("user_session", MODE_PRIVATE);
-    SharedPreferences.Editor editor = preferences.edit();
-    editor.putString("auth_token", token);
-    editor.putBoolean("is_logged_in", true);
-    editor.apply();
-}
-```
-
-### 3.3 Auto-Login (Salto de Login)
-Verifica la sesión al arrancar la app en el `onCreate`:
-```java
-if (preferences.getBoolean("is_logged_in", false)) {
-    startActivity(new Intent(this, MainActivity.class));
-    finish();
-}
-```
+### 4.2 Depuración Profesional
+Configura un `HttpLoggingInterceptor` en tu `RetrofitClient`. Esto te permitirá ver el JSON exacto de entrada y salida en la pestaña **Logcat** de Android Studio.
 
 ---
 
-## 4. Comunicación con Microservicios (Retrofit)
+## 5. Actualización Obligatoria con Firestore
 
-### 4.1 Cliente Global (`RetrofitClient`)
-Configura la URL base del microservicio y los interceptores para depurar las peticiones:
+Este sistema garantiza que todos los usuarios tengan la versión más reciente.
+
+### 5.1 Estructura en la Nube
+En Firebase Cloud Firestore, crea un documento en `versiones/actual` con:
+- `versionCode` (Numérico)
+- `apkUrl` (Texto con el link de descarga)
+
+### 5.2 Lógica de Comparación
+La app compara su código interno con el de Firestore:
 ```java
-private static final String BASE_URL = "https://api-sgau-backend-746899482768.us-central1.run.app/";
-```
-
-### 4.2 Consumo con JWT (Token)
-Para peticiones protegidas, debemos enviar el token en el header `Authorization`:
-```java
-@GET("api/usuarios/{id}")
-Call<UserResponse> getUserById(@Header("Authorization") String token, @Path("id") int id);
-```
-
-Y al llamarlo:
-`apiService.getUserById("Bearer " + storedToken, 1);`
-
----
-
-## 5. Actualización Automática con Firestore
-
-Una funcionalidad avanzada es verificar si hay una nueva versión disponible consultando Firebase Cloud Firestore.
-
-### 5.1 Estructura en Firestore
-Debes tener una colección `versiones` con un documento `actual` que contenga:
-- `versionCode` (Number): El código de versión numérico.
-- `versionName` (String): El nombre de la versión (ej. "1.0.5").
-- `apkUrl` (String): URL directa para descargar el APK.
-
-### 5.2 Lógica de Verificación
-Obtenemos dinámicamente la versión instalada y la comparamos con la de la nube:
-
-```java
-PackageInfo pInfo = context.getPackageManager().getPackageInfo(context.getPackageName(), 0);
-long currentVersionCode = pInfo.getLongVersionCode();
-
-if (firebaseVersionCode > currentVersionCode) {
-    // Mostrar diálogo y descargar APK
+if (firebaseVersionCode > appInstalledVersionCode) {
+    // 1. Mostrar Diálogo Obligatorio (setCancelable(false))
+    // 2. Descargar APK asíncronamente
+    // 3. Iniciar Instalador oficial
 }
 ```
 
-### 5.3 Instalación Segura (FileProvider)
-Para instalar un APK descargado en versiones modernas de Android, es obligatorio usar un `FileProvider` para otorgar permisos temporales al instalador de paquetes.
-
-**En el Manifest:**
-```xml
-<provider
-    android:name="androidx.core.content.FileProvider"
-    android:authorities="${applicationId}.fileprovider"
-    android:exported="false"
-    android:grantUriPermissions="true">
-    <meta-data
-        android:name="android.support.FILE_PROVIDER_PATHS"
-        android:resource="@xml/file_paths" />
-</provider>
-```
+### 5.3 Seguridad en la Instalación (FileProvider)
+Para abrir el instalador en Android moderno, debes configurar un `FileProvider` en el Manifest y definir las rutas permitidas en `res/xml/file_paths.xml`. Esto otorga permisos temporales de lectura al instalador sobre el archivo APK descargado.
 
 ---
 
-## 6. Errores Comunes y Soluciones
+## 6. Resolución de Errores Comunes
 
-1.  **Error 400 (Bad Request)**: Revisa que tu clase `LoginRequest` tenga los nombres de campos exactos (`@SerializedName("usuario")`) que el servidor espera.
-2.  **Pantalla se pone negra al compartir**: El sistema operativo protege los campos de contraseña. Intenta quitar el foco del campo `EditText` antes de compartir pantalla.
-3.  **Recursos no encontrados**: Si agregas un `resValue` en Gradle, **debes sincronizar (Sync Project with Gradle Files)** antes de usarlo en el XML.
-4.  **Contexto Nulo**: Al usar Retrofit dentro de un fragmento o clase anónima, asegúrate de usar `MainActivity.this` en lugar de solo `this` para los Toasts o Diálogos.
+1. **Error 400**: El servidor rechazó los datos. Verifica que los nombres de los campos en tus clases Java coincidan con el JSON del API.
+2. **Error 403/401**: El Token JWT ha expirado o es inválido.
+3. **App no instala la actualización**: Verifica que el `authorities` del `FileProvider` en el Java coincida exactamente con el del `AndroidManifest.xml`.
+4. **Permisos**: Asegúrate de tener `INTERNET` y `REQUEST_INSTALL_PACKAGES` declarados.
