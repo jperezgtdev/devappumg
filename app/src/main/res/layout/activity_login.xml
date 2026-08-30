@@ -181,7 +181,7 @@
                         android:layout_weight="1"
                         android:background="@android:color/transparent"
                         android:hint="@string/username_hint"
-                        android:inputType="textEmailAddress"
+                        android:inputType="text"
                         android:padding="0dp"
                         android:textColor="@color/text_primary"
                         android:textColorHint="@color/text_hint"

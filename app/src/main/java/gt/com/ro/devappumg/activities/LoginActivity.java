@@ -92,7 +92,6 @@ public class LoginActivity extends AppCompatActivity {
         progressBar.setVisibility(View.VISIBLE);
         btnIngresar.setEnabled(false);
 
-        // El header X-Company-ID ahora se envía automáticamente desde RetrofitClient
         RetrofitClient.getApiService().login(request).enqueue(new Callback<LoginResponse>() {
             @Override
             public void onResponse(Call<LoginResponse> call, Response<LoginResponse> response) {

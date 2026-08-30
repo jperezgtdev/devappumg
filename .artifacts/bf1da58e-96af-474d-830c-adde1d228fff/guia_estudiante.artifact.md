@@ -135,7 +135,47 @@ Y al llamarlo:
 
 ---
 
-## 5. Errores Comunes y Soluciones
+## 5. Actualización Automática con Firestore
+
+Una funcionalidad avanzada es verificar si hay una nueva versión disponible consultando Firebase Cloud Firestore.
+
+### 5.1 Estructura en Firestore
+Debes tener una colección `versiones` con un documento `actual` que contenga:
+- `versionCode` (Number): El código de versión numérico.
+- `versionName` (String): El nombre de la versión (ej. "1.0.5").
+- `apkUrl` (String): URL directa para descargar el APK.
+
+### 5.2 Lógica de Verificación
+Obtenemos dinámicamente la versión instalada y la comparamos con la de la nube:
+
+```java
+PackageInfo pInfo = context.getPackageManager().getPackageInfo(context.getPackageName(), 0);
+long currentVersionCode = pInfo.getLongVersionCode();
+
+if (firebaseVersionCode > currentVersionCode) {
+    // Mostrar diálogo y descargar APK
+}
+```
+
+### 5.3 Instalación Segura (FileProvider)
+Para instalar un APK descargado en versiones modernas de Android, es obligatorio usar un `FileProvider` para otorgar permisos temporales al instalador de paquetes.
+
+**En el Manifest:**
+```xml
+<provider
+    android:name="androidx.core.content.FileProvider"
+    android:authorities="${applicationId}.fileprovider"
+    android:exported="false"
+    android:grantUriPermissions="true">
+    <meta-data
+        android:name="android.support.FILE_PROVIDER_PATHS"
+        android:resource="@xml/file_paths" />
+</provider>
+```
+
+---
+
+## 6. Errores Comunes y Soluciones
 
 1.  **Error 400 (Bad Request)**: Revisa que tu clase `LoginRequest` tenga los nombres de campos exactos (`@SerializedName("usuario")`) que el servidor espera.
 2.  **Pantalla se pone negra al compartir**: El sistema operativo protege los campos de contraseña. Intenta quitar el foco del campo `EditText` antes de compartir pantalla.
